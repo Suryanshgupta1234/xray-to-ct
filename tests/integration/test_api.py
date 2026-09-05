@@ -95,3 +95,13 @@ def test_auth_and_inference_lifecycle():
     assert hist_res.status_code == 200
     hist_items = hist_res.json()["data"]["items"]
     assert any(item["id"] == job_id for item in hist_items)
+
+    # 8. Retrieve Hospital Clinical Report & Telemetry
+    report_res = client.get(f"/api/v1/inference/{job_id}/report", headers=headers)
+    assert report_res.status_code == 200
+    report_data = report_res.json()["data"]
+    assert report_data["job_id"] == job_id
+    assert report_data["patient"]["patient_id"].startswith("PT-2026-")
+    assert report_data["attenuation_analysis"]["signal_to_noise_ratio_db"] > 0
+    assert report_data["hospital"]["institution_name"] is not None
+    assert "findings" in report_data

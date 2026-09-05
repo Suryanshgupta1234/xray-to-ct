@@ -15,6 +15,7 @@ import { ResultPage } from './pages/ResultPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { ModelInfoPage } from './pages/ModelInfoPage';
 import { AdminPage } from './pages/AdminPage';
+import { HospitalReportPage } from './pages/HospitalReportPage';
 
 // Protected route guard
 const ProtectedRoute = ({ children }) => {
@@ -68,6 +69,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ResultPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/report/:id"
+            element={
+              <ProtectedRoute>
+                <HospitalReportPage />
               </ProtectedRoute>
             }
           />
