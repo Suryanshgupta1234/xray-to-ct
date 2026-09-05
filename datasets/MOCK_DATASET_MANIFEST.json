@@ -1,0 +1,15 @@
+{
+  "is_synthetic_mock": true,
+  "disclaimer": "SYNTHETIC PHANTOM DATA STRICTLY FOR PIPELINE TESTING. NOT REAL CLINICAL DATA.",
+  "total_pairs": 36,
+  "splits": {
+    "train": 24,
+    "val": 6,
+    "test": 6
+  },
+  "resolution": [
+    256,
+    256
+  ],
+  "seed": 42
+}

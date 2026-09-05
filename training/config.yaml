@@ -1,0 +1,42 @@
+# ==============================================================================
+# Training Configuration for pix2pix X-Ray to CT Translation
+# ==============================================================================
+
+model:
+  name: "pix2pix_unet256"
+  version: "v1"
+  in_channels: 1
+  out_channels: 1
+  image_size: [256, 256]
+  normalize_range: [-1.0, 1.0]
+
+dataset:
+  root_dir: "./datasets"
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+  augment: true
+
+hyperparameters:
+  batch_size: 4
+  num_epochs: 30
+  lr_generator: 0.0002
+  lr_discriminator: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  lambda_l1: 100.0
+  use_lsgan: true
+  lr_decay_start_epoch: 15
+
+system:
+  device: "auto"        # "auto", "cuda", or "cpu"
+  num_workers: 0        # 0 recommended for Windows multi-process safety
+  seed: 42
+  checkpoint_dir: "./training/checkpoints"
+  checkpoint_frequency_epochs: 5
+  early_stopping_patience: 10
+
+logging:
+  use_mlflow: false
+  mlflow_uri: "http://localhost:5000"
+  log_interval_batches: 5
