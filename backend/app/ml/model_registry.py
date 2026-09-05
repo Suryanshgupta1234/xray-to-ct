@@ -60,15 +60,20 @@ class ModelRegistry:
             if ver in self._models:
                 return self._models[ver]
 
-            # Construct weights path
-            model_dir = Path(settings.MODEL_DIR)
-            weights_file = model_dir / ver / "generator.pth"
+            # Robust search across candidate model directories
+            candidates = [
+                Path(settings.MODEL_DIR) / ver / "generator.pth",
+                Path("./models") / ver / "generator.pth",
+                Path("../models") / ver / "generator.pth",
+                Path(settings.ACTIVE_MODEL_PATH),
+            ]
+            weights_file = candidates[0]
+            for c in candidates:
+                if c.exists():
+                    weights_file = c
+                    break
 
-            if not weights_file.exists():
-                # Fallback to direct path or checkpoint
-                weights_file = Path(settings.ACTIVE_MODEL_PATH)
-
-            logger.info(f"Loading model version '{ver}' from {weights_file}")
+            logger.info(f"Loading model version '{ver}' from {weights_file.resolve()}")
             model = load_generator_weights(str(weights_file), device=self._device)
 
             # Warm-up inference
