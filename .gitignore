@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+postgres_data/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Machine Learning & Checkpoints
+training/checkpoints/*.pth
+training/checkpoints/*.pt
+models/*/*.pth
+models/*/*.pt
+!models/v1/.gitkeep
+wandb/
+mlruns/
+
+# Datasets (Prevent uploading heavy raw clinical datasets to git)
+datasets/train/xray/*
+datasets/train/ct/*
+datasets/val/xray/*
+datasets/val/ct/*
+datasets/test/xray/*
+datasets/test/ct/*
+!datasets/**/.gitkeep
+
+# Storage / Uploads
+uploads/
+results/
+backend/uploads/
+backend/results/
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
