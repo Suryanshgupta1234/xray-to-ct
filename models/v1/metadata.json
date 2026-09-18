@@ -10,7 +10,7 @@
   "out_channels": 1,
   "hyperparameters": {
     "batch_size": 4,
-    "num_epochs": 2,
+    "num_epochs": 3,
     "lr_generator": 0.0002,
     "lr_discriminator": 0.0002,
     "beta1": 0.5,
@@ -20,11 +20,11 @@
     "lr_decay_start_epoch": 15
   },
   "best_validation_metrics": {
-    "val_loss": 57.1205,
-    "MAE": 0.570188,
-    "MSE": 0.400243,
-    "PSNR_dB": 10.0,
-    "SSIM": 0.2193
+    "val_loss": 47.3854,
+    "MAE": 0.469923,
+    "MSE": 0.447408,
+    "PSNR_dB": 9.52,
+    "SSIM": 0.3216
   },
   "disclaimer": "AI-generated research model weights. NOT FOR CLINICAL DIAGNOSIS."
 }

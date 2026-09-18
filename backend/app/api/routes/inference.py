@@ -24,6 +24,8 @@ from app.schemas.inference import (
     HospitalInfo,
     QuantitativeAttenuationAnalysis,
     RadiologicStructuredFindings,
+    CTSliceSeriesResponse,
+    CTSliceItem,
 )
 from app.utils.validators import ImageValidationError
 
@@ -240,4 +242,84 @@ async def get_clinical_report(
         data=report_payload,
         message="Comprehensive clinical report generated",
     )
+
+
+@router.get("/{id}/slices", response_model=StandardResponse[CTSliceSeriesResponse])
+async def get_inference_slices(
+    id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: BaseStorageService = Depends(get_storage_service),
+):
+    """Retrieves or dynamically computes the 16-slice volumetric CT stack."""
+    query = select(InferenceJob).where(InferenceJob.id == id, InferenceJob.user_id == current_user.id)
+    res = await db.execute(query)
+    job = res.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "JOB_NOT_FOUND", "message": f"Inference job '{id}' not found."},
+        )
+
+    service = InferenceService(db=db, storage=storage)
+    slice_series = await service.get_or_generate_slices(job)
+
+    return StandardResponse(
+        success=True,
+        data=slice_series,
+        message=f"Generated {slice_series.total_slices} axial CT volumetric slices",
+    )
+
+
+@router.get("/samples/clinical")
+async def get_clinical_sample_cases():
+    """Returns metadata and base64 payloads for pre-loaded clinical test cases."""
+    import base64
+    from pathlib import Path
+
+    sample_cases = [
+        {
+            "id": "sample-brain-01",
+            "name": "Case 1: Adult Cranial DRR / Brain CT",
+            "modality": "Cranial / Brain CT",
+            "pathology": "Calvarial integrity, normal lateral ventricles, symmetric parenchyma",
+            "filename": "clinical_brain_drr.png",
+            "rel_path": "datasets/test/xray/case_0031_brain.png",
+        },
+        {
+            "id": "sample-chest-02",
+            "name": "Case 2: Thoracic Chest DRR / Axial CT",
+            "modality": "Thoracic / Chest CT",
+            "pathology": "Bilateral lung parenchyma, cardiac silhouette, aortic arch",
+            "filename": "clinical_chest_drr.png",
+            "rel_path": "datasets/test/xray/case_0032_chest.png",
+        },
+        {
+            "id": "sample-brain-03",
+            "name": "Case 3: Cranial CT / Sellar Anatomy",
+            "modality": "Cranial / Skull",
+            "pathology": "Midline structures, skull base, high-density bone margin",
+            "filename": "clinical_cranial_drr.png",
+            "rel_path": "datasets/test/xray/case_0033_brain.png",
+        },
+    ]
+
+    results = []
+    for c in sample_cases:
+        p = Path(c["rel_path"])
+        if p.exists():
+            with open(p, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            results.append({
+                **c,
+                "data_url": f"data:image/png;base64,{b64}",
+            })
+
+    return StandardResponse(
+        success=True,
+        data=results,
+        message=f"Loaded {len(results)} clinical sample cases",
+    )
+
 

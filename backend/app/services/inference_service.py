@@ -16,7 +16,12 @@ from app.services.postprocessing_service import PostprocessingService
 from app.ml.predictor import Predictor
 from app.core.config import settings
 from app.core.logging import logger
-from app.schemas.inference import InferenceJobResponseData
+from app.services.volumetric_synthesizer import VolumetricSynthesizer
+from app.schemas.inference import (
+    InferenceJobResponseData,
+    CTSliceItem,
+    CTSliceSeriesResponse,
+)
 
 
 class InferenceService:
@@ -31,6 +36,7 @@ class InferenceService:
         self.storage = storage or get_storage_service()
         self.preprocessor = PreprocessingService(target_size=(settings.IMAGE_SIZE, settings.IMAGE_SIZE))
         self.postprocessor = PostprocessingService()
+        self.volumetric_synthesizer = VolumetricSynthesizer(target_size=(settings.IMAGE_SIZE, settings.IMAGE_SIZE))
 
     async def execute_translation(
         self,
@@ -66,18 +72,41 @@ class InferenceService:
             predictor = Predictor(model_version=ver)
             pred_tensor, latency_ms = predictor.predict(input_tensor)
 
-            # 5. Postprocess
+            # 5. Postprocess primary representations
             output_png_bytes, diff_png_bytes, _ = self.postprocessor.process_prediction(
                 pred_tensor, input_tensor=input_tensor
             )
 
-            # 6. Persist generated results
+            # 6. Persist generated base results
             output_path = await self.storage.save_file(output_png_bytes, extension="png", subfolder="results")
             diff_path = None
             if diff_png_bytes:
                 diff_path = await self.storage.save_file(diff_png_bytes, extension="png", subfolder="results")
 
-            # 7. Update Job Status
+            # 7. Synthesize Multi-Slice Volumetric CT Stack (16 Axial Slices)
+            raw_slices = self.volumetric_synthesizer.synthesize_slice_series(
+                base_ct_tensor=pred_tensor,
+                input_xray_tensor=input_tensor,
+            )
+            saved_slices = []
+            for sl in raw_slices:
+                s_path = await self.storage.save_file(
+                    sl["png_bytes"], extension="png", subfolder=f"slices/{job.id}"
+                )
+                saved_slices.append({
+                    "slice_index": sl["slice_index"],
+                    "total_slices": sl["total_slices"],
+                    "z_position_mm": sl["z_position_mm"],
+                    "relative_position": sl["relative_position"],
+                    "anatomical_level": sl["anatomical_level"],
+                    "description": sl["description"],
+                    "suggested_window": sl["suggested_window"],
+                    "mean_hu": sl["mean_hu"],
+                    "tissue_predominance": sl["tissue_predominance"],
+                    "storage_path": s_path,
+                })
+
+            # 8. Update Job Status & Metadata
             job.output_image_path = output_path
             job.status = InferenceStatus.COMPLETED
             job.processing_time_ms = round(latency_ms, 2)
@@ -87,6 +116,7 @@ class InferenceService:
                 "difference_map_path": diff_path,
                 "latency_ms": latency_ms,
                 "device": str(predictor.registry.device),
+                "slices": saved_slices,
             }
 
             await self.db.commit()
@@ -132,3 +162,68 @@ class InferenceService:
             completed_at=job.completed_at,
             metadata=job.metadata_json,
         )
+
+    async def get_or_generate_slices(self, job: InferenceJob) -> CTSliceSeriesResponse:
+        """Retrieves or on-demand synthesizes the 16-slice volumetric CT stack for a job."""
+        slices_meta = job.metadata_json.get("slices") if (job.metadata_json and isinstance(job.metadata_json, dict)) else None
+
+        if not slices_meta:
+            # Dynamically synthesize if not present from prior run
+            input_bytes = await self.storage.get_file(job.input_image_path)
+            input_tensor, _, _ = self.preprocessor.process_upload(input_bytes, job.original_filename or "input.png")
+            predictor = Predictor(model_version=job.model_version or settings.ACTIVE_MODEL_VERSION)
+            pred_tensor, _ = predictor.predict(input_tensor)
+
+            raw_slices = self.volumetric_synthesizer.synthesize_slice_series(
+                base_ct_tensor=pred_tensor,
+                input_xray_tensor=input_tensor,
+            )
+            saved_slices = []
+            for sl in raw_slices:
+                s_path = await self.storage.save_file(
+                    sl["png_bytes"], extension="png", subfolder=f"slices/{job.id}"
+                )
+                saved_slices.append({
+                    "slice_index": sl["slice_index"],
+                    "total_slices": sl["total_slices"],
+                    "z_position_mm": sl["z_position_mm"],
+                    "relative_position": sl["relative_position"],
+                    "anatomical_level": sl["anatomical_level"],
+                    "description": sl["description"],
+                    "suggested_window": sl["suggested_window"],
+                    "mean_hu": sl["mean_hu"],
+                    "tissue_predominance": sl["tissue_predominance"],
+                    "storage_path": s_path,
+                })
+
+            current_meta = dict(job.metadata_json or {})
+            current_meta["slices"] = saved_slices
+            job.metadata_json = current_meta
+            await self.db.commit()
+            await self.db.refresh(job)
+            slices_meta = saved_slices
+
+        items = [
+            CTSliceItem(
+                slice_index=s["slice_index"],
+                total_slices=s["total_slices"],
+                z_position_mm=s["z_position_mm"],
+                relative_position=s["relative_position"],
+                anatomical_level=s["anatomical_level"],
+                description=s["description"],
+                suggested_window=s["suggested_window"],
+                mean_hu=s["mean_hu"],
+                tissue_predominance=s["tissue_predominance"],
+                image_url=self.storage.get_url(s["storage_path"]),
+            )
+            for s in slices_meta
+        ]
+
+        scout_url = self.storage.get_url(job.input_image_path)
+        return CTSliceSeriesResponse(
+            job_id=job.id,
+            total_slices=len(items),
+            scout_image_url=scout_url,
+            slices=items,
+        )
+

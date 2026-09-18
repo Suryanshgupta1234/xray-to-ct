@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, AlertCircle, FileText, Download, Stethoscope, FileSpreadsheet } from 'lucide-react';
 import { ComparisonViewer } from '../components/ComparisonViewer';
+import { CTSliceViewer } from '../components/CTSliceViewer';
 import { inferenceAPI } from '../api/client';
 
 export const ResultPage = () => {
@@ -9,6 +10,7 @@ export const ResultPage = () => {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [viewerTab, setViewerTab] = useState('volumetric'); // 'volumetric' | 'comparison'
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -94,13 +96,47 @@ export const ResultPage = () => {
         </div>
       </div>
 
-      {/* Main Interactive Comparison Viewer */}
-      <ComparisonViewer
-        inputUrl={job.input_image_url}
-        outputUrl={job.output_image_url}
-        diffUrl={job.difference_map_url}
-        jobData={job}
-      />
+      {/* View Mode Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+        <button
+          onClick={() => setViewerTab('volumetric')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            viewerTab === 'volumetric'
+              ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-current" />
+          Volumetric CT Slices (16-Slice PACS Cine Workstation)
+        </button>
+
+        <button
+          onClick={() => setViewerTab('comparison')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            viewerTab === 'comparison'
+              ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-bold'
+              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+          }`}
+        >
+          2D Interactive Comparison (Slider / Heatmap)
+        </button>
+      </div>
+
+      {/* Primary Display Viewport */}
+      {viewerTab === 'volumetric' ? (
+        <CTSliceViewer
+          jobId={job.id}
+          defaultInputUrl={job.input_image_url}
+          defaultOutputUrl={job.output_image_url}
+        />
+      ) : (
+        <ComparisonViewer
+          inputUrl={job.input_image_url}
+          outputUrl={job.output_image_url}
+          diffUrl={job.difference_map_url}
+          jobData={job}
+        />
+      )}
 
       {/* Clinical Hospital Imaging Report Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 border border-cyan-500/30 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

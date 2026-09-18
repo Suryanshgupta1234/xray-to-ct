@@ -26,16 +26,25 @@ export const HospitalReportPage = () => {
   const [error, setError] = useState(null);
   const [selectedWindow, setSelectedWindow] = useState('soft_tissue'); // 'soft_tissue' | 'lung' | 'bone'
   const [reviewStatus, setReviewStatus] = useState('PRELIMINARY_RESEARCH');
+  const [slices, setSlices] = useState([]);
 
   useEffect(() => {
-    const fetchReport = async () => {
+    const fetchReportData = async () => {
       try {
-        const res = await inferenceAPI.getReport(id);
-        if (res.success && res.data) {
-          setReport(res.data);
-          setReviewStatus(res.data.signoff_status || 'PRELIMINARY_RESEARCH');
+        const [reportRes, sliceRes] = await Promise.allSettled([
+          inferenceAPI.getReport(id),
+          inferenceAPI.getSlices(id),
+        ]);
+
+        if (reportRes.status === 'fulfilled' && reportRes.value?.success && reportRes.value?.data) {
+          setReport(reportRes.value.data);
+          setReviewStatus(reportRes.value.data.signoff_status || 'PRELIMINARY_RESEARCH');
         } else {
           setError('Could not compile clinical imaging report.');
+        }
+
+        if (sliceRes.status === 'fulfilled' && sliceRes.value?.success && sliceRes.value?.data?.slices) {
+          setSlices(sliceRes.value.data.slices);
         }
       } catch (err) {
         setError(err.message || 'Report retrieval failed.');
@@ -44,7 +53,7 @@ export const HospitalReportPage = () => {
       }
     };
 
-    fetchReport();
+    fetchReportData();
   }, [id]);
 
   const handlePrint = () => {
@@ -260,6 +269,53 @@ export const HospitalReportPage = () => {
             Figure 1: Planar radiographic input (left) aligned with deep synthesized cross-sectional axial tomography representation (right).
           </p>
         </section>
+
+        {/* Multi-Slice Volumetric Survey (Key Axial Levels) */}
+        {slices.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 print:border-slate-300 pb-2">
+              <h2 className="text-sm font-bold text-white print:text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                <Layers className="w-4 h-4 text-cyan-400 print:text-cyan-700" />
+                Multi-Slice Volumetric Survey (Representative Axial Levels)
+              </h2>
+              <span className="text-[11px] font-mono text-cyan-400 print:text-cyan-800">
+                16-Slice Series • 2.5mm Inter-Slice Reconstruction
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[0, 4, 8, 12].map((idx) => {
+                const s = slices[idx] || slices[0];
+                if (!s) return null;
+                return (
+                  <div
+                    key={s.slice_index}
+                    className="p-3 rounded-xl bg-slate-950/70 print:bg-slate-50 border border-slate-800 print:border-slate-300 space-y-1.5"
+                  >
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 print:text-slate-600">
+                      <span className="font-bold text-cyan-400 print:text-cyan-800">SL {String(s.slice_index).padStart(2, '0')}</span>
+                      <span>Z: {s.z_position_mm > 0 ? `+${s.z_position_mm}` : s.z_position_mm}mm</span>
+                    </div>
+                    <img
+                      src={s.image_url}
+                      alt={s.anatomical_level}
+                      className="w-full aspect-square object-contain rounded bg-black filter contrast-125"
+                    />
+                    <div className="text-[10px] text-slate-200 print:text-slate-800 font-semibold truncate" title={s.anatomical_level}>
+                      {s.anatomical_level}
+                    </div>
+                    <div className="text-[9px] font-mono text-slate-500 print:text-slate-600">
+                      HU: {s.mean_hu > 0 ? `+${s.mean_hu}` : s.mean_hu}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] font-mono text-slate-500 print:text-slate-600 text-center italic">
+              Figure 2: Representative axial multi-slice tomographic reconstructions spanning from superior apices to basal costophrenic recesses.
+            </p>
+          </section>
+        )}
 
         {/* 4. Quantitative Attenuation & Density Telemetry */}
         <section className="space-y-4">

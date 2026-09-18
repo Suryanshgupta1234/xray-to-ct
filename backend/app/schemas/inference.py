@@ -134,3 +134,30 @@ class InferenceListResponseData(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class CTSliceItem(BaseModel):
+    slice_index: int
+    total_slices: int
+    z_position_mm: float
+    relative_position: float
+    anatomical_level: str
+    description: str
+    suggested_window: str
+    mean_hu: float
+    tissue_predominance: str
+    image_url: str
+
+
+class CTSliceSeriesResponse(BaseModel):
+    job_id: str
+    series_description: str = "Axial Volumetric CT Reconstruction (Thorax Protocol)"
+    slice_thickness_mm: float = 2.5
+    total_slices: int
+    scout_image_url: str
+    slices: List[CTSliceItem]
+    disclaimer: str = (
+        "RESEARCH ONLY: Volumetric CT slices are synthesized approximations derived from a single 2D radiograph. "
+        "Not clinically certified for diagnostic interpretation or medical treatment."
+    )
+

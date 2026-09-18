@@ -63,6 +63,8 @@ export const inferenceAPI = {
   },
   getJob: (id) => api.get(`/inference/${id}`),
   getReport: (id) => api.get(`/inference/${id}/report`),
+  getSlices: (id) => api.get(`/inference/${id}/slices`),
+  getClinicalSamples: () => api.get('/inference/samples/clinical'),
   getHistory: (page = 1, pageSize = 10) => api.get(`/inference/history?page=${page}&page_size=${pageSize}`),
   deleteJob: (id) => api.delete(`/inference/${id}`),
 };

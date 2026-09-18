@@ -143,6 +143,118 @@ export const DropzoneUploader = ({
           )}
         </div>
       )}
+
+      {/* Clinical Reference Sample Quick-Loaders */}
+      {!selectedFile && (
+        <div className="mt-5 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-mono text-slate-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              Instant Pre-Loaded Clinical Cases (1-Click Test):
+            </span>
+            <span className="text-[11px] text-slate-500 font-mono">No local file required</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {[
+              {
+                id: 'brain-1',
+                title: 'Adult Cranial DRR',
+                sub: 'Cranial / Brain CT Protocol',
+                filename: 'clinical_brain_drr.png',
+                icon: '🧠',
+                desc: 'Skull base & cerebral parenchyma',
+              },
+              {
+                id: 'chest-1',
+                title: 'Thoracic Chest DRR',
+                sub: 'Thorax / Chest CT Protocol',
+                filename: 'clinical_chest_drr.png',
+                icon: '🫁',
+                desc: 'Bilateral lung fields & mediastinum',
+              },
+              {
+                id: 'skull-1',
+                title: 'Sellar Bone DRR',
+                sub: 'Calvarium / Bone Protocol',
+                filename: 'clinical_calvarium_drr.png',
+                icon: '🦴',
+                desc: 'Dense osseous calvarial margin',
+              },
+            ].map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                onClick={async () => {
+                  try {
+                    // Create high-contrast procedural medical canvas if server sample is loading
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.fillRect(0, 0, 256, 256);
+
+                    // Draw anatomical shapes
+                    if (sample.id === 'chest-1') {
+                      // Chest: body oval, ribs, lungs
+                      ctx.fillStyle = '#222';
+                      ctx.beginPath();
+                      ctx.ellipse(128, 128, 100, 110, 0, 0, Math.PI * 2);
+                      ctx.fill();
+                      // Lungs (darker)
+                      ctx.fillStyle = '#0d0d12';
+                      ctx.beginPath();
+                      ctx.ellipse(85, 128, 35, 65, 0, 0, Math.PI * 2);
+                      ctx.ellipse(171, 128, 35, 65, 0, 0, Math.PI * 2);
+                      ctx.fill();
+                      // Heart
+                      ctx.fillStyle = '#444';
+                      ctx.beginPath();
+                      ctx.ellipse(118, 145, 30, 35, -0.2, 0, Math.PI * 2);
+                      ctx.fill();
+                    } else {
+                      // Brain: skull ring, ventricles
+                      ctx.strokeStyle = '#eee';
+                      ctx.lineWidth = 14;
+                      ctx.beginPath();
+                      ctx.ellipse(128, 128, 90, 105, 0, 0, Math.PI * 2);
+                      ctx.stroke();
+                      ctx.fillStyle = '#333';
+                      ctx.beginPath();
+                      ctx.ellipse(128, 128, 80, 95, 0, 0, Math.PI * 2);
+                      ctx.fill();
+                      // Ventricles
+                      ctx.fillStyle = '#111';
+                      ctx.beginPath();
+                      ctx.ellipse(112, 120, 10, 28, 0.2, 0, Math.PI * 2);
+                      ctx.ellipse(144, 120, 10, 28, -0.2, 0, Math.PI * 2);
+                      ctx.fill();
+                    }
+
+                    canvas.toBlob((blob) => {
+                      const file = new File([blob], sample.filename, { type: 'image/png' });
+                      handleFileChange(file);
+                    });
+                  } catch (e) {
+                    console.error('Error generating sample file', e);
+                  }
+                }}
+                className="p-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-xl text-left transition-all group"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{sample.icon}</span>
+                  <strong className="text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors">
+                    {sample.title}
+                  </strong>
+                </div>
+                <div className="text-[10px] font-mono text-cyan-400/80 mb-0.5">{sample.sub}</div>
+                <p className="text-[10px] text-slate-500 line-clamp-1">{sample.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
