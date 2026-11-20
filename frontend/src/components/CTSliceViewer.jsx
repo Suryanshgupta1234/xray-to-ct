@@ -345,6 +345,11 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
           >
             <img
               src={currentSlice.image_url}
+              onError={(e) => {
+                if (defaultOutputUrl && e.target.src !== defaultOutputUrl) {
+                  e.target.src = defaultOutputUrl;
+                }
+              }}
               alt={`CT Axial Slice ${currentSlice.slice_index}`}
               className={`max-h-[380px] w-auto object-contain transition-all duration-75 ${
                 windowFilters[windowPreset]
@@ -502,6 +507,11 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
               >
                 <img
                   src={s.image_url}
+                  onError={(e) => {
+                    if (defaultOutputUrl && e.target.src !== defaultOutputUrl) {
+                      e.target.src = defaultOutputUrl;
+                    }
+                  }}
                   alt={`Thumb ${s.slice_index}`}
                   className="w-12 h-12 object-cover rounded bg-black filter contrast-125"
                 />
