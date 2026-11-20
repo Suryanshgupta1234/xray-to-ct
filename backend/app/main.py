@@ -4,10 +4,12 @@ Configures CORS, registers routes, centralized exception handlers,
 and orchestrates database/model lifespan management.
 """
 
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 
 from app.core.config import settings
@@ -147,12 +149,30 @@ app.include_router(inference_router, prefix=settings.API_PREFIX)
 app.include_router(images_router, prefix=settings.API_PREFIX)
 app.include_router(models_router, prefix=settings.API_PREFIX)
 
+# ------------------------------------------------------------------------------
+# Frontend SPA Static Serving (Production / Unified Container Mode)
+# ------------------------------------------------------------------------------
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
+    if (STATIC_DIR / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
-@app.get("/")
-async def root():
-    return {
-        "project": settings.PROJECT_NAME,
-        "docs": f"{settings.API_PREFIX}/docs",
-        "health": f"{settings.API_PREFIX}/health",
-        "disclaimer": "RESEARCH ONLY - NOT A CLINICAL CT SCAN",
-    }
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Don't intercept API endpoints or docs
+        clean_path = full_path.lstrip("/")
+        if clean_path.startswith("api/") or clean_path.startswith("docs") or clean_path == "openapi.json":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API route not found")
+        target_file = STATIC_DIR / clean_path
+        if target_file.is_file():
+            return FileResponse(target_file)
+        return FileResponse(STATIC_DIR / "index.html")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "project": settings.PROJECT_NAME,
+            "docs": f"{settings.API_PREFIX}/docs",
+            "health": f"{settings.API_PREFIX}/health",
+            "disclaimer": "RESEARCH ONLY - NOT A CLINICAL CT SCAN",
+        }

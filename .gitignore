@@ -66,6 +66,9 @@ uploads/
 results/
 backend/uploads/
 backend/results/
+backend/app/static/
+storage/
+data/
 
 # Testing & Coverage
 .coverage

@@ -25,6 +25,8 @@ scipy>=1.10.0
 pillow>=10.0.0
 pydicom>=2.4.0
 scikit-image>=0.21.0
+nibabel>=5.0.0
+opencv-python-headless>=4.8.0
 
 # Utilities & Configuration
 pyyaml>=6.0.1

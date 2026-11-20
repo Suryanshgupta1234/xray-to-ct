@@ -1,3 +1,13 @@
+---
+title: X-Ray to CT Volumetric Translation PACS Workstation
+emoji: 🩻
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # X-Ray to CT Image Translation System (Production-Grade Research Platform)
 
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)

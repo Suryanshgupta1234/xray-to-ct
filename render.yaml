@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: xray-to-ct-pacs
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEVICE
+        value: cpu
+      - key: ACTIVE_MODEL_VERSION
+        value: v1
