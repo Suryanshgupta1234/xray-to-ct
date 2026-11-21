@@ -4,6 +4,9 @@ Configures CORS, registers routes, centralized exception handlers,
 and orchestrates database/model lifespan management.
 """
 
+import torch
+torch.set_num_threads(1)
+
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, status
@@ -33,10 +36,6 @@ async def lifespan(app: FastAPI):
     # Initialize database tables
     await init_db()
     logger.info("Database initialized successfully.")
-
-    # Pre-warm model in background
-    _ = model_registry.get_model()
-    logger.info("Model registry ready.")
 
     yield
 

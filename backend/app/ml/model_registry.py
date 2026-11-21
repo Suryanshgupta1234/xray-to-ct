@@ -8,11 +8,11 @@ import threading
 from pathlib import Path
 from typing import Dict, Any, Optional
 import torch
+import torch.nn as nn
 
 from app.core.config import settings
 from app.core.logging import logger
 from app.ml.model_loader import load_generator_weights
-from ml.models.pix2pix.generator import UNetGenerator
 
 
 class ModelRegistry:
@@ -32,7 +32,7 @@ class ModelRegistry:
         if getattr(self, "_initialized", False):
             return
 
-        self._models: Dict[str, UNetGenerator] = {}
+        self._models: Dict[str, nn.Module] = {}
         self._device = self._determine_device()
         self._initialized = True
         logger.info(f"ModelRegistry initialized on device: {self._device}")
@@ -49,7 +49,7 @@ class ModelRegistry:
     def device(self) -> torch.device:
         return self._device
 
-    def get_model(self, version: Optional[str] = None) -> UNetGenerator:
+    def get_model(self, version: Optional[str] = None) -> nn.Module:
         """Retrieves cached model or loads and caches it on first request."""
         ver = version or settings.ACTIVE_MODEL_VERSION
 
@@ -76,19 +76,20 @@ class ModelRegistry:
             logger.info(f"Loading model version '{ver}' from {weights_file.resolve()}")
             model = load_generator_weights(str(weights_file), device=self._device)
 
-            # Warm-up inference
-            self._warmup(model)
+            # Warm-up inference only if running on GPU
+            if self._device.type == "cuda":
+                self._warmup(model)
 
             self._models[ver] = model
             return model
 
-    def _warmup(self, model: UNetGenerator) -> None:
+    def _warmup(self, model: nn.Module) -> None:
         """Runs a zero-tensor dummy forward pass to warm up PyTorch CUDA kernels."""
         try:
             with torch.inference_mode():
                 dummy = torch.zeros(1, 1, 256, 256, device=self._device)
                 _ = model(dummy)
-            logger.info("Model warm-up completed successfully.")
+            logger.info("CUDA model warm-up completed successfully.")
         except Exception as e:
             logger.warning(f"Model warm-up encountered warning: {e}")
 
