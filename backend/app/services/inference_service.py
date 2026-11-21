@@ -132,6 +132,11 @@ class InferenceService:
                 },
             )
 
+            # Reclaim Python & PyTorch memory immediately after translation
+            import gc
+            del pred_tensor, raw_slices, output_png_bytes, diff_png_bytes
+            gc.collect()
+
             return self._build_response_data(job, diff_path)
 
         except Exception as e:
