@@ -61,10 +61,13 @@ app = FastAPI(
 # ------------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list or ["*"],
+    allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"^https://([a-zA-Z0-9_-]+\.)?vercel\.app$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,
 )
 
 
@@ -148,6 +151,11 @@ app.include_router(inference_router, prefix=settings.API_PREFIX)
 app.include_router(images_router, prefix=settings.API_PREFIX)
 app.include_router(models_router, prefix=settings.API_PREFIX)
 
+# Also expose auth and health directly at root (e.g. /auth/register, /auth/login, /health)
+# Ensures seamless compatibility whether frontend requests /api/v1/auth/... or /auth/...
+app.include_router(auth_router)
+app.include_router(health_router)
+
 # ------------------------------------------------------------------------------
 # Frontend SPA Static Serving (Production / Unified Container Mode)
 # ------------------------------------------------------------------------------
@@ -160,7 +168,13 @@ if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
     async def serve_spa(full_path: str):
         # Don't intercept API endpoints or docs
         clean_path = full_path.lstrip("/")
-        if clean_path.startswith("api/") or clean_path.startswith("docs") or clean_path == "openapi.json":
+        if (
+            clean_path.startswith("api/")
+            or clean_path.startswith("auth/")
+            or clean_path.startswith("health")
+            or clean_path.startswith("docs")
+            or clean_path == "openapi.json"
+        ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API route not found")
         target_file = STATIC_DIR / clean_path
         if target_file.is_file():

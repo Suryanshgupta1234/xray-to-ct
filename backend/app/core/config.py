@@ -56,11 +56,31 @@ class Settings(BaseSettings):
     ALLOWED_MIME_TYPES: str = "image/png,image/jpeg,application/dicom,application/octet-stream"
 
     # CORS Configuration
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+    CORS_ORIGINS: str = (
+        "https://xray-to-ct.vercel.app,"
+        "https://xray-to-ct.onrender.com,"
+        "http://localhost:5173,"
+        "http://localhost:3000,"
+        "http://127.0.0.1:5173,"
+        "http://127.0.0.1:3000"
+    )
 
     @property
     def cors_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        # Explicitly guarantee production and local origins
+        required_origins = [
+            "https://xray-to-ct.vercel.app",
+            "https://xray-to-ct.onrender.com",
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+        ]
+        for req in required_origins:
+            if req not in origins:
+                origins.append(req)
+        return origins
 
     @property
     def allowed_extensions_list(self) -> List[str]:

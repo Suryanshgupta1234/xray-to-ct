@@ -1,7 +1,24 @@
 import axios from 'axios';
 
+// Get base URL from environment, or default to relative '/api/v1'
+const rawBaseURL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').trim();
+
+// Normalize URL: If the user provides a bare host e.g. "https://xray-to-ct.onrender.com"
+// without "/api/v1", automatically append "/api/v1".
+const getNormalizedBaseURL = (url) => {
+  if (!url) return '/api/v1';
+  const clean = url.replace(/\/+$/, '');
+  if (clean.endsWith('/api/v1')) {
+    return clean;
+  }
+  if (clean.endsWith('/api')) {
+    return `${clean}/v1`;
+  }
+  return `${clean}/api/v1`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: getNormalizedBaseURL(rawBaseURL),
   timeout: 120000, // 2 minutes for CPU-based heavy inference fallback
 });
 
