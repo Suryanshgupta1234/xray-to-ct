@@ -50,10 +50,20 @@ async def get_stored_image(
     filename = parts[-1]
     ext = filename.split(".")[-1].lower() if "." in filename else "png"
     media_type = "image/png"
-    if ext in ("jpg", "jpeg"):
+    if ext in ("jpg", "jpeg", "jfif"):
         media_type = "image/jpeg"
     elif ext in ("dcm", "dicom"):
         media_type = "application/dicom"
+    elif ext == "webp":
+        media_type = "image/webp"
+    elif ext == "bmp":
+        media_type = "image/bmp"
+    elif ext in ("tiff", "tif"):
+        media_type = "image/tiff"
+    elif ext in ("heic", "heif"):
+        media_type = "image/heic"
+    elif ext == "avif":
+        media_type = "image/avif"
 
     return Response(
         content=data,
@@ -61,5 +71,6 @@ async def get_stored_image(
         headers={
             "Cache-Control": "public, max-age=86400",
             "X-Content-Type-Options": "nosniff",
+            "Access-Control-Allow-Origin": "*",
         },
     )

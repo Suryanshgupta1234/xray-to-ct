@@ -151,10 +151,11 @@ app.include_router(inference_router, prefix=settings.API_PREFIX)
 app.include_router(images_router, prefix=settings.API_PREFIX)
 app.include_router(models_router, prefix=settings.API_PREFIX)
 
-# Also expose auth and health directly at root (e.g. /auth/register, /auth/login, /health)
-# Ensures seamless compatibility whether frontend requests /api/v1/auth/... or /auth/...
+# Also expose auth, health, and images directly at root (e.g. /auth/register, /auth/login, /health, /images/...)
+# Ensures seamless compatibility whether frontend requests /api/v1/... or /...
 app.include_router(auth_router)
 app.include_router(health_router)
+app.include_router(images_router)
 
 # ------------------------------------------------------------------------------
 # Frontend SPA Static Serving (Production / Unified Container Mode)

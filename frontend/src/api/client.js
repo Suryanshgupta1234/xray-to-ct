@@ -17,6 +17,60 @@ const getNormalizedBaseURL = (url) => {
   return `${clean}/api/v1`;
 };
 
+// Derive Backend Root Origin (e.g. "https://xray-to-ct.onrender.com")
+export const getBackendOrigin = () => {
+  if (rawBaseURL && (rawBaseURL.startsWith('http://') || rawBaseURL.startsWith('https://'))) {
+    try {
+      const parsed = new URL(rawBaseURL);
+      return parsed.origin;
+    } catch {
+      // ignore
+    }
+  }
+  // When running on Vercel or any deployed domain without VITE_API_BASE_URL
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('vercel.app')) {
+      return 'https://xray-to-ct.onrender.com';
+    }
+  }
+  return '';
+};
+
+// Converts any relative image path (e.g. "/api/v1/images/...") to an absolute backend URL
+export const getAssetUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const origin = getBackendOrigin();
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return origin ? `${origin}${cleanPath}` : cleanPath;
+};
+
+// Recursively normalize all image URL fields in API responses
+const resolveImageUrls = (data) => {
+  if (!data || typeof data !== 'object') return data;
+  if (Array.isArray(data)) {
+    return data.map(resolveImageUrls);
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (
+      typeof value === 'string' &&
+      (key.endsWith('_url') || key === 'image_url' || key === 'url' || key.endsWith('Url')) &&
+      (value.startsWith('/api/') || value.startsWith('/images/'))
+    ) {
+      result[key] = getAssetUrl(value);
+    } else if (value && typeof value === 'object') {
+      result[key] = resolveImageUrls(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
 const api = axios.create({
   baseURL: getNormalizedBaseURL(rawBaseURL),
   timeout: 120000, // 2 minutes for CPU-based heavy inference fallback
@@ -37,6 +91,10 @@ api.interceptors.request.use(
 // Response Interceptor: Extract standard envelope and handle auth expiration
 api.interceptors.response.use(
   (response) => {
+    // If response contains envelope data, recursively resolve image URLs
+    if (response.data && response.data.data) {
+      response.data.data = resolveImageUrls(response.data.data);
+    }
     return response.data; // Return the standard envelope { success, data, message }
   },
   (error) => {

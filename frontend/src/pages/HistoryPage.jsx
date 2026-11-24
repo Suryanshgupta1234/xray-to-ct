@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { History, Eye, Trash2, ChevronLeft, ChevronRight, FileImage, AlertCircle } from 'lucide-react';
-import { inferenceAPI } from '../api/client';
+import { inferenceAPI, getAssetUrl } from '../api/client';
 
 export const HistoryPage = () => {
   const [jobs, setJobs] = useState([]);
@@ -102,7 +102,7 @@ export const HistoryPage = () => {
                       <div className="flex items-center gap-2">
                         {job.input_image_url ? (
                           <img
-                            src={job.input_image_url}
+                            src={getAssetUrl(job.input_image_url)}
                             alt="Input"
                             className="w-9 h-9 rounded object-cover border border-slate-800 bg-black"
                           />
@@ -112,7 +112,7 @@ export const HistoryPage = () => {
                         <span className="text-slate-600">→</span>
                         {job.output_image_url ? (
                           <img
-                            src={job.output_image_url}
+                            src={getAssetUrl(job.output_image_url)}
                             alt="Output"
                             className="w-9 h-9 rounded object-cover border border-slate-800 bg-black"
                           />

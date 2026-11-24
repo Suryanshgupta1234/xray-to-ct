@@ -23,20 +23,29 @@ export const DropzoneUploader = ({
       return;
     }
 
-    // Validate extension
-    const ext = file.name.split('.').pop().toLowerCase();
-    const allowed = ['png', 'jpg', 'jpeg', 'dcm', 'dicom'];
-    if (!allowed.includes(ext)) {
-      setValidationError(`Unsupported format (.${ext}). Allowed: PNG, JPEG, DICOM.`);
+    // Validate type / extension (mobile camera photos, HEIC, WebP, JPEG, PNG, DICOM)
+    const ext = file.name ? file.name.split('.').pop().toLowerCase() : '';
+    const allowed = [
+      'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'tif', 'jfif', 'avif', 'heic', 'heif', 'dcm', 'dicom'
+    ];
+    const isImageMime = file.type && file.type.startsWith('image/');
+    const isDicomMime = file.type === 'application/dicom' || file.type === 'application/octet-stream';
+
+    if (!allowed.includes(ext) && !isImageMime && !isDicomMime) {
+      setValidationError(`Unsupported format (.${ext || 'unknown'}). Allowed: PNG, JPEG, WebP, DICOM.`);
       return;
     }
 
-    // Generate local preview if PNG/JPEG
-    if (file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+    // Generate local preview for standard images
+    if (isImageMime || ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'jfif', 'avif'].includes(ext)) {
+      try {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } catch {
+        setPreviewUrl(null);
+      }
     } else {
-      setPreviewUrl(null); // DICOM binary
+      setPreviewUrl(null); // DICOM binary or non-previewable
     }
 
     onFileSelected(file);
@@ -82,7 +91,7 @@ export const DropzoneUploader = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".png,.jpg,.jpeg,.dcm,.dicom"
+            accept="image/*,.dcm,.dicom,application/dicom"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
           />
@@ -93,10 +102,10 @@ export const DropzoneUploader = ({
 
           <div>
             <h3 className="text-base font-semibold text-slate-100">
-              Drag and drop an X-ray image here
+              Select or capture an X-ray image
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Supports <strong className="text-slate-300">PNG, JPEG, and DICOM (.dcm)</strong> up to 25 MB
+              Supports <strong className="text-slate-300">Camera photos, PNG, JPEG, WebP, and DICOM</strong> up to 25 MB
             </p>
           </div>
 
@@ -104,7 +113,7 @@ export const DropzoneUploader = ({
             type="button"
             className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors"
           >
-            Browse Local File
+            Browse / Take Photo
           </button>
         </div>
       ) : (
@@ -114,6 +123,7 @@ export const DropzoneUploader = ({
               <img
                 src={previewUrl}
                 alt="Upload preview"
+                onError={() => setPreviewUrl(null)}
                 className="w-14 h-14 object-cover rounded-lg border border-slate-800 shrink-0"
               />
             ) : (

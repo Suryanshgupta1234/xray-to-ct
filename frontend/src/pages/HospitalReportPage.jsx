@@ -17,7 +17,7 @@ import {
   Maximize2,
   RefreshCw,
 } from 'lucide-react';
-import { inferenceAPI } from '../api/client';
+import { inferenceAPI, getAssetUrl } from '../api/client';
 
 export const HospitalReportPage = () => {
   const { id } = useParams();
@@ -246,7 +246,7 @@ export const HospitalReportPage = () => {
                 <span>CR / DR Projection</span>
               </div>
               <img
-                src={report.input_image_url}
+                src={getAssetUrl(report.input_image_url)}
                 alt="Input Radiograph"
                 className="w-full max-h-[320px] object-contain rounded bg-slate-950"
               />
@@ -259,7 +259,7 @@ export const HospitalReportPage = () => {
                 <span>Estimated HU Profile</span>
               </div>
               <img
-                src={report.output_image_url}
+                src={getAssetUrl(report.output_image_url)}
                 alt="Synthesized CT"
                 className={`w-full max-h-[320px] object-contain rounded bg-slate-950 transition-all ${windowStyles[selectedWindow]}`}
               />
@@ -297,7 +297,7 @@ export const HospitalReportPage = () => {
                       <span>Z: {s.z_position_mm > 0 ? `+${s.z_position_mm}` : s.z_position_mm}mm</span>
                     </div>
                     <img
-                      src={s.image_url}
+                      src={getAssetUrl(s.image_url)}
                       alt={s.anatomical_level}
                       className="w-full aspect-square object-contain rounded bg-black filter contrast-125"
                     />

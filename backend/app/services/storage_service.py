@@ -82,8 +82,12 @@ class LocalStorageService(BaseStorageService):
 
     def get_url(self, path_or_key: str) -> str:
         # Returns REST API image download/streaming endpoint
-        clean_key = path_or_key.replace("\\", "/")
-        return f"{settings.API_PREFIX}/images/{clean_key}"
+        clean_key = path_or_key.replace("\\", "/").lstrip("/")
+        relative_url = f"{settings.API_PREFIX}/images/{clean_key}"
+        if settings.PUBLIC_BASE_URL:
+            base = settings.PUBLIC_BASE_URL.rstrip("/")
+            return f"{base}{relative_url}"
+        return relative_url
 
     async def check_health(self) -> bool:
         try:

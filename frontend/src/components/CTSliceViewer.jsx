@@ -18,7 +18,7 @@ import {
   Gauge,
   Compass,
 } from 'lucide-react';
-import { inferenceAPI } from '../api/client';
+import { inferenceAPI, getAssetUrl } from '../api/client';
 
 export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
   const [sliceData, setSliceData] = useState(null);
@@ -33,9 +33,14 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
   const [isDraggingPan, setIsDraggingPan] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   const containerRef = useRef(null);
   const playTimerRef = useRef(null);
+
+  useEffect(() => {
+    setIsImageLoading(true);
+  }, [activeSliceIdx]);
 
   // Fetch 16-slice volumetric stack from backend
   useEffect(() => {
@@ -284,7 +289,7 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
             title="Click anywhere along the vertical axis to jump to that slice level"
           >
             <img
-              src={scoutUrl}
+              src={getAssetUrl(scoutUrl)}
               alt="Scout Localizer"
               className="w-full h-full object-contain filter contrast-125"
             />
@@ -343,11 +348,19 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
             }}
             className="w-full h-full flex items-center justify-center"
           >
+            {isImageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10 pointer-events-none">
+                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
             <img
-              src={currentSlice.image_url}
+              src={getAssetUrl(currentSlice.image_url)}
+              onLoad={() => setIsImageLoading(false)}
               onError={(e) => {
-                if (defaultOutputUrl && e.target.src !== defaultOutputUrl) {
-                  e.target.src = defaultOutputUrl;
+                setIsImageLoading(false);
+                const fallback = getAssetUrl(defaultOutputUrl);
+                if (fallback && e.target.src !== fallback) {
+                  e.target.src = fallback;
                 }
               }}
               alt={`CT Axial Slice ${currentSlice.slice_index}`}
@@ -506,10 +519,11 @@ export const CTSliceViewer = ({ jobId, defaultInputUrl, defaultOutputUrl }) => {
                 }`}
               >
                 <img
-                  src={s.image_url}
+                  src={getAssetUrl(s.image_url)}
                   onError={(e) => {
-                    if (defaultOutputUrl && e.target.src !== defaultOutputUrl) {
-                      e.target.src = defaultOutputUrl;
+                    const fallback = getAssetUrl(defaultOutputUrl);
+                    if (fallback && e.target.src !== fallback) {
+                      e.target.src = fallback;
                     }
                   }}
                   alt={`Thumb ${s.slice_index}`}

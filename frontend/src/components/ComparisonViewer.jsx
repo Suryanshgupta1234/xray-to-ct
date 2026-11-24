@@ -14,6 +14,7 @@ import {
   Cpu,
   AlertCircle,
 } from 'lucide-react';
+import { getAssetUrl } from '../api/client';
 
 export const ComparisonViewer = ({
   inputUrl,
@@ -80,9 +81,10 @@ export const ComparisonViewer = ({
   };
 
   const handleDownload = () => {
-    if (!outputUrl) return;
+    const targetUrl = getAssetUrl(outputUrl);
+    if (!targetUrl) return;
     const a = document.createElement('a');
-    a.href = outputUrl;
+    a.href = targetUrl;
     a.download = `ct_translation_${jobData?.id?.substring(0, 8) || 'result'}.png`;
     document.body.appendChild(a);
     a.click();
@@ -209,7 +211,7 @@ export const ComparisonViewer = ({
           >
             {/* Background: Synthesized CT */}
             <img
-              src={outputUrl}
+              src={getAssetUrl(outputUrl)}
               alt="Generated CT"
               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             />
@@ -223,7 +225,7 @@ export const ComparisonViewer = ({
               style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
             >
               <img
-                src={inputUrl}
+                src={getAssetUrl(inputUrl)}
                 alt="Input X-Ray"
                 className="absolute inset-0 w-full h-full object-contain pointer-events-none"
               />
@@ -256,7 +258,7 @@ export const ComparisonViewer = ({
             <div className="relative flex flex-col items-center bg-slate-950/50 rounded-lg border border-slate-800 p-2">
               <span className="text-xs font-mono text-slate-400 mb-2">Original Planar X-Ray</span>
               <img
-                src={inputUrl}
+                src={getAssetUrl(inputUrl)}
                 alt="Input X-Ray"
                 className="w-full h-full max-h-[400px] object-contain rounded"
               />
@@ -264,7 +266,7 @@ export const ComparisonViewer = ({
             <div className="relative flex flex-col items-center bg-slate-950/50 rounded-lg border border-cyan-900/40 p-2">
               <span className="text-xs font-mono text-cyan-400 mb-2">AI-Generated CT Representation</span>
               <img
-                src={outputUrl}
+                src={getAssetUrl(outputUrl)}
                 alt="Generated CT"
                 className="w-full h-full max-h-[400px] object-contain rounded"
               />
@@ -285,7 +287,7 @@ export const ComparisonViewer = ({
               Absolute Spatial Difference Intensity (|X-ray - Synthesized CT|)
             </span>
             <img
-              src={diffUrl}
+              src={getAssetUrl(diffUrl)}
               alt="Difference Heatmap"
               className="max-h-[400px] object-contain rounded border border-amber-500/30"
             />

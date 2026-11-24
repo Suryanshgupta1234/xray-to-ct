@@ -54,41 +54,40 @@ def validate_uploaded_image(
         )
 
     # 2. Extension check
-    filename_lower = original_filename.lower()
+    filename_lower = original_filename.lower().strip()
     ext = filename_lower.split(".")[-1] if "." in filename_lower else ""
-    if ext not in settings.allowed_extensions_list:
+
+    dangerous_exts = {"exe", "bat", "cmd", "sh", "ps1", "py", "js", "php", "html", "htm", "vbs", "jar"}
+    if ext in dangerous_exts:
+        raise ImageValidationError(
+            "UNSUPPORTED_EXTENSION",
+            f"File extension '.{ext}' is prohibited for security."
+        )
+
+    if ext and ext not in settings.allowed_extensions_list:
         raise ImageValidationError(
             "UNSUPPORTED_EXTENSION",
             f"Extension '.{ext}' is not supported. Allowed extensions: {settings.ALLOWED_EXTENSIONS}."
         )
 
-    # 3. Magic Byte Inspection (Anti-spoofing)
+    # 3. Format and integrity inspection
     detected_mime = None
-    if file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
-        detected_mime = "image/png"
-    elif file_bytes.startswith(b"\xff\xd8\xff"):
-        detected_mime = "image/jpeg"
-    elif len(file_bytes) > 132 and file_bytes[128:132] == b"DICM":
-        detected_mime = "application/dicom"
+    dimensions = (0, 0)
 
-    # Fallback check for DICOM preamble omission
-    if ext in ("dcm", "dicom") and detected_mime is None:
+    # Check for DICOM standard header or explicit dicom extension
+    is_dicom = False
+    if len(file_bytes) > 132 and file_bytes[128:132] == b"DICM":
+        is_dicom = True
+    elif ext in ("dcm", "dicom"):
         try:
             import pydicom
             pydicom.dcmread(io.BytesIO(file_bytes), stop_before_pixels=True)
-            detected_mime = "application/dicom"
+            is_dicom = True
         except Exception:
-            pass
+            is_dicom = False
 
-    if not detected_mime:
-        raise ImageValidationError(
-            "INVALID_MIME_TYPE",
-            "File header does not match any allowed medical or standard image format."
-        )
-
-    # 4. Integrity and dimension validation
-    dimensions = (0, 0)
-    if detected_mime == "application/dicom":
+    if is_dicom:
+        detected_mime = "application/dicom"
         try:
             import pydicom
             dcm = pydicom.dcmread(io.BytesIO(file_bytes))
@@ -97,14 +96,39 @@ def validate_uploaded_image(
         except Exception as e:
             raise ImageValidationError("CORRUPT_DICOM", f"Failed to parse DICOM pixel array: {str(e)}")
     else:
+        # Standard image formats (JPEG, PNG, WebP, BMP, TIFF, JFIF, AVIF, etc.)
         try:
             with Image.open(io.BytesIO(file_bytes)) as img:
-                img.verify()
-            # Re-open after verify() to inspect dimensions
-            with Image.open(io.BytesIO(file_bytes)) as img:
+                img_format = (img.format or "").upper()
                 dimensions = img.size
+
+                mime_map = {
+                    "PNG": "image/png",
+                    "JPEG": "image/jpeg",
+                    "MPO": "image/jpeg",
+                    "JFIF": "image/jpeg",
+                    "WEBP": "image/webp",
+                    "BMP": "image/bmp",
+                    "TIFF": "image/tiff",
+                    "AVIF": "image/avif",
+                    "HEIC": "image/heic",
+                    "HEIF": "image/heif",
+                }
+                detected_mime = mime_map.get(
+                    img_format,
+                    f"image/{img_format.lower()}" if img_format else "image/png"
+                )
         except Exception as e:
-            raise ImageValidationError("CORRUPT_IMAGE", f"Image file is corrupt or unreadable: {str(e)}")
+            raise ImageValidationError(
+                "CORRUPT_IMAGE",
+                f"Image file is corrupt or unreadable. Please upload a standard photo or radiograph (PNG, JPEG, WebP, DICOM): {str(e)}"
+            )
+
+    if not detected_mime:
+        raise ImageValidationError(
+            "INVALID_MIME_TYPE",
+            "File header does not match any allowed medical or standard image format."
+        )
 
     width, height = dimensions
     if width > max_dimension or height > max_dimension:

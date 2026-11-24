@@ -3,6 +3,7 @@ Application Settings & Configuration Management.
 Uses Pydantic Settings for strict environment variable parsing and validation.
 """
 
+import os
 from pathlib import Path
 from typing import List, Union
 from pydantic import Field, field_validator
@@ -52,8 +53,11 @@ class Settings(BaseSettings):
 
     # File Upload Constraints
     MAX_UPLOAD_SIZE_MB: int = 25
-    ALLOWED_EXTENSIONS: str = "png,jpg,jpeg,dcm"
-    ALLOWED_MIME_TYPES: str = "image/png,image/jpeg,application/dicom,application/octet-stream"
+    ALLOWED_EXTENSIONS: str = "png,jpg,jpeg,webp,bmp,tiff,tif,jfif,avif,heic,heif,dcm,dicom"
+    ALLOWED_MIME_TYPES: str = "image/png,image/jpeg,image/webp,image/bmp,image/tiff,image/avif,image/jfif,image/heic,image/heif,application/dicom,application/octet-stream"
+
+    # Base Public Host for absolute asset URLs (automatically uses Render URL if deployed)
+    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", os.getenv("RENDER_EXTERNAL_URL", ""))
 
     # CORS Configuration
     CORS_ORIGINS: str = (
